@@ -1,0 +1,30 @@
+# Ignore environment files
+.env
+
+# Directorio de caché de Gradle
+.gradle
+
+# Directorio de construcción
+**/build/
+!src/**/build/
+
+# Archivos del wrapper de Gradle (opcional)
+gradlew
+gradlew.bat
+gradle/wrapper/gradle-wrapper.jar
+gradle/wrapper/gradle-wrapper.properties
+
+# Archivos específicos del IDE (si corresponde)
+.idea/
+*.iml
+
+# Otros archivos temporales o generados automáticamente
+*.log
+*.class
+
+# Archivos específicos del sistema operativo (si corresponde)
+.DS_Store
+Thumbs.db
+
+### VS Code ###
+.vscode/

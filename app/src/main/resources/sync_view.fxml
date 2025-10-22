@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="dbtools.SyncController"
+      spacing="10"
+      alignment="TOP_CENTER">
+
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <!-- SSH and DB Validation Section -->
+    <Label text="🔍 Connection Status" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
+
+    <HBox spacing="10">
+        <Button fx:id="checkSSHButton"
+                text="Check SSH Connection"
+                onAction="#openSSH"
+                prefWidth="180"/>
+        <Label fx:id="sshStatusLabel" text="Unknown" style="-fx-text-fill: gray;"/>
+    </HBox>
+
+    <HBox spacing="10">
+        <Button fx:id="checkDBButton"
+                text="Check Database Connection"
+                onAction="#openSourceDb"
+                prefWidth="180"/>
+        <Label fx:id="dbStatusLabel" text="Unknown" style="-fx-text-fill: gray;"/>
+    </HBox>
+
+    <Separator />
+
+    <!-- Table Selection -->
+    <Label text="📋 Table Selector" style="-fx-font-weight: bold;" />
+    <ComboBox fx:id="tableSelector" prefWidth="250"/>
+
+    <HBox spacing="10">
+        <Button fx:id="syncStructButton" text="Sync Structure" onAction="#handleSyncStructure" disable="true"/>
+        <Button fx:id="syncDataButton" text="Sync Data" onAction="#handleSyncData" disable="true"/>
+    </HBox>
+
+    <Separator />
+
+    <!-- Log Output -->
+    <Label text="🧾 Log Output" style="-fx-font-weight: bold;"/>
+    <TextArea fx:id="logArea"
+              prefHeight="200"
+              prefWidth="400"
+              wrapText="true"
+              editable="false"/>
+</VBox>
