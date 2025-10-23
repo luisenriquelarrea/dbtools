@@ -52,39 +52,37 @@ public class SyncController {
         try {
             if (srcConn != null && !srcConn.isClosed()) {
                 srcConn.close();
-                log("✅ Source DB connection closed");
+                log("Remote DB connection closed");
             }
         } catch (Exception e) {
-            log("⚠️ Error closing source DB: " + e.getMessage());
+            log("Error closing remote DB: " + e.getMessage());
         }
     
         try {
             if (destConn != null && !destConn.isClosed()) {
                 destConn.close();
-                log("✅ Destination DB connection closed");
+                log("Localhost DB connection closed");
             }
         } catch (Exception e) {
-            log("⚠️ Error closing destination DB: " + e.getMessage());
+            log("Error closing localhost DB: " + e.getMessage());
         }
     
         try {
             if (sshSession != null && sshSession.isConnected()) {
                 sshSession.disconnect();
-                log("🔒 SSH session disconnected");
+                log("SSH session disconnected");
             }
         } catch (Exception e) {
-            log("⚠️ Error closing SSH session: " + e.getMessage());
+            log("Error closing SSH session: " + e.getMessage());
         }
     
         Platform.runLater(() -> {
-            sshStatusLabel.setText("🔌 Disconnected");
+            sshStatusLabel.setText("Disconnected");
             sshStatusLabel.setStyle("-fx-text-fill: gray;");
-            //dbSrcStatusLabel.setText("❌ Disconnected");
-            //dbDestStatusLabel.setText("❌ Disconnected");
         });
     }    
 
-    // 🔐 SSH Connection Check
+    // SSH Connection Check
     @FXML
     private void openSSH() {
         new Thread(() -> {
@@ -92,21 +90,24 @@ public class SyncController {
                 String sshHost = dotenv.get("SSH_HOST");
                 String sshUser = dotenv.get("SSH_USER");
                 String sshPass = dotenv.get("SSH_PASS");
-                int sshPort = Integer.parseInt(dotenv.get("SSH_PORT", "22"));
-                int localPort = 3307;  // pick an available port on your computer
-                int remotePort = 3306; // MySQL port on the remote server
-                String remoteHost = "127.0.0.1"; // from SSH server’s perspective
+                int sshPort = Integer.parseInt(dotenv.get("SSH_PORT"));
+                
+                int localPort = Integer.parseInt(dotenv.get("DB_SRC_AVALIABLE_PORT"));
+                int remotePort = Integer.parseInt(dotenv.get("DB_SRC_PORT"));
+                String remoteHost = dotenv.get("DB_SRC_HOST");
 
                 JSch jsch = new JSch();
                 sshSession = jsch.getSession(sshUser, sshHost, sshPort);
                 sshSession.setPassword(sshPass);
                 sshSession.setConfig("StrictHostKeyChecking", "no");
                 sshSession.connect(5000);
+
                 // Create SSH tunnel
                 sshSession.setPortForwardingL(localPort, remoteHost, remotePort);
+
                 sshOk = sshSession.isConnected();
                 Platform.runLater(() -> {
-                    sshStatusLabel.setText("✅ Connected");
+                    sshStatusLabel.setText("Connected");
                     sshStatusLabel.setStyle("-fx-text-fill: green;");
                     log("SSH connection successful.");
                     enableSyncIfReady();
@@ -114,7 +115,7 @@ public class SyncController {
             } catch (Exception e) {
                 sshOk = false;
                 Platform.runLater(() -> {
-                    sshStatusLabel.setText("❌ Failed");
+                    sshStatusLabel.setText("Failed");
                     sshStatusLabel.setStyle("-fx-text-fill: red;");
                     log("SSH connection failed: " + e.getMessage());
                 });
@@ -122,6 +123,7 @@ public class SyncController {
         }).start();
     }
 
+    // Database Connection Check
     private void openDestDb() {
         new Thread(() -> {
             try {
@@ -138,7 +140,7 @@ public class SyncController {
 
                 dbDestOk = !destConn.isClosed();
                 Platform.runLater(() -> {
-                    dbStatusLabel.setText("✅ Connected");
+                    dbStatusLabel.setText("Connected");
                     dbStatusLabel.setStyle("-fx-text-fill: green;");
                     log("Database localhost connection successful.");
                     enableSyncIfReady();
@@ -147,7 +149,7 @@ public class SyncController {
             } catch (Exception e) {
                 dbDestOk = false;
                 Platform.runLater(() -> {
-                    dbStatusLabel.setText("❌ Failed");
+                    dbStatusLabel.setText("Failed");
                     dbStatusLabel.setStyle("-fx-text-fill: red;");
                     log("Database localhost connection failed: " + e.getMessage());
                 });
@@ -155,7 +157,7 @@ public class SyncController {
         }).start();
     }
 
-    // 🗄️ Database Connection Check
+    // Database Connection Check
     @FXML
     private void openSourceDb() {
         new Thread(() -> {
@@ -173,10 +175,7 @@ public class SyncController {
 
                 dbSrcOk = !srcConn.isClosed();
                 Platform.runLater(() -> {
-                    //dbStatusLabel.setText("✅ Connected");
-                    //dbStatusLabel.setStyle("-fx-text-fill: green;");
                     log("Database remote connection successful.");
-                    //enableSyncIfReady();
                     loadTables();
                     openDestDb();
                 });
@@ -184,7 +183,7 @@ public class SyncController {
             } catch (Exception e) {
                 dbSrcOk = false;
                 Platform.runLater(() -> {
-                    dbStatusLabel.setText("❌ Failed");
+                    dbStatusLabel.setText("Failed");
                     dbStatusLabel.setStyle("-fx-text-fill: red;");
                     log("Database remote connection failed: " + e.getMessage());
                 });
@@ -192,7 +191,7 @@ public class SyncController {
         }).start();
     }
 
-    // 📋 Load Tables into ComboBox
+    // Load Tables into ComboBox
     private void loadTables() {
         new Thread(() -> {
             try (Statement stmt = srcConn.createStatement()) {
@@ -212,12 +211,12 @@ public class SyncController {
         }).start();
     }
 
-    // 🔄 Sync Table Structure
+    // Sync Table Structure
     @FXML
     private void handleSyncStructure() {
         String table = tableSelector.getValue();
         if (table == null || table.isEmpty()) {
-            log("⚠️ Please select a table first.");
+            log("Please select a table first.");
             return;
         }
         log("Starting table structure sync for: " + table);
@@ -229,7 +228,7 @@ public class SyncController {
 
                 List<String> alterStatements = new ArrayList<>();
 
-                // 1️⃣ Find missing or mismatched columns
+                // Find missing or mismatched columns
                 for (var entry : sourceCols.entrySet()) {
                     String col = entry.getKey();
                     ColumnInfo srcInfo = entry.getValue();
@@ -246,16 +245,16 @@ public class SyncController {
                     }
                 }
 
-                // 2️⃣ Find columns in destination but not in source
+                // Find columns in destination but not in source
                 for (String col : destCols.keySet()) {
                     if (!sourceCols.containsKey(col)) {
                         alterStatements.add("ALTER TABLE " + table + " DROP COLUMN " + col + ";");
                     }
                 }
 
-                // 3️⃣ Apply the changes
+                // Apply the changes
                 if (alterStatements.isEmpty()) {
-                    Platform.runLater(() -> log("✅ Structures are already synchronized."));
+                    Platform.runLater(() -> log("Structures are already synchronized."));
                 } else {
                     for (String sql : alterStatements) {
                         Platform.runLater(() -> log("Applying: " + sql));
@@ -263,7 +262,7 @@ public class SyncController {
                             stmt.execute(sql);
                         }
                     }
-                    Platform.runLater(() -> log("✅ Structure synchronization completed."));
+                    Platform.runLater(() -> log("Structure synchronization completed."));
                 }
             } catch (SQLException e) {
                 Platform.runLater(() -> log("Struct sync failed: " + e.getMessage()));
@@ -271,16 +270,16 @@ public class SyncController {
         }).start();
     }
 
-    // 💾 Sync table data
+    // Sync table data
     @FXML
     private void handleSyncData() {
         String table = tableSelector.getValue();
         if (table == null || table.isEmpty()) {
-            log("⚠️ Select a table first.");
+            log("Select a table first.");
             return;
         }
 
-        log("🔄 Starting batch data synchronization for table: " + table);
+        log("Starting batch data synchronization for table: " + table);
 
         new Thread(() -> {
             try {
@@ -291,7 +290,7 @@ public class SyncController {
                 while (pkRs.next()) pkCols.add(pkRs.getString("COLUMN_NAME"));
 
                 if (pkCols.isEmpty()) {
-                    Platform.runLater(() -> log("⚠️ Table " + table + " has no primary key — cannot safely sync."));
+                    Platform.runLater(() -> log("Table " + table + " has no primary key — cannot safely sync."));
                     return;
                 }
 
@@ -344,23 +343,23 @@ public class SyncController {
                                 ps.executeBatch();
                                 batchSize = 0;
                                 int progress = totalRows;
-                                Platform.runLater(() -> log("✅ Synced " + progress + " rows so far..."));
+                                Platform.runLater(() -> log("Synced " + progress + " rows so far..."));
                             }
                         }
 
                         if (batchSize > 0) ps.executeBatch();
-                        String msg = "🎯 Data synchronization completed for " + totalRows + " rows in table: " + table;
+                        String msg = "Data synchronization completed for " + totalRows + " rows in table: " + table;
                         Platform.runLater(() -> log(msg));
                     }
                 }
 
             } catch (Exception e) {
-                Platform.runLater(() -> log("❌ Data sync failed: " + e.getMessage()));
+                Platform.runLater(() -> log("Data sync failed: " + e.getMessage()));
             }
         }).start();
     }
 
-    // ✅ Enable sync button if both connections are OK
+    // Enable sync button if both connections are OK
     private void enableSyncIfReady() {
         if (sshOk && dbSrcOk && dbDestOk) {
             syncStructButton.setDisable(false);
@@ -369,9 +368,9 @@ public class SyncController {
         }
     }
 
-    // 🪵 Append to log area
+    // Append to log area
     private void log(String msg) {
-        Platform.runLater(() -> logArea.appendText(msg + "\n"));
+        Platform.runLater(() -> logArea.appendText("> " + msg + "\n"));
     }
 
     private Map<String, ColumnInfo> getTableColumns(Connection conn, String tableName) throws SQLException {
