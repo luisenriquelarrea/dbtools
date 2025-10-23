@@ -24,6 +24,7 @@ import java.util.Objects;
 
 public class SyncController {
 
+    @FXML private Button getUpdatesButton;
     @FXML private Button checkConnButton;
     @FXML private Button closeConnButton;
     @FXML private Label connStatusLabel;
@@ -78,10 +79,60 @@ public class SyncController {
         Platform.runLater(() -> {
             connStatusLabel.setText("Disconnected");
             connStatusLabel.setStyle("-fx-text-fill: gray;");
+
             tableSelector.getItems().clear();
+
+            getUpdatesButton.setDisable(true);
             syncStructButton.setDisable(true);
             syncDataButton.setDisable(true);
         });
+    }
+
+    @FXML
+    private void handleGetUpdates(){
+        log("Checking for new tables in source...");
+
+        new Thread(() -> {
+            try {
+                List<String> srcTables = getTableList(srcConn);
+                List<String> destTables = getTableList(destConn);
+
+                List<String> newTables = new ArrayList<>();
+                for (String t : srcTables) {
+                    if (!destTables.contains(t)) {
+                        newTables.add(t);
+                    }
+                }
+
+                if (newTables.isEmpty()) {
+                    Platform.runLater(() -> log("No new tables found."));
+                    return;
+                }
+
+                Platform.runLater(() -> log("Found " + newTables.size() + " new table(s): " + newTables));
+
+                for (String table : newTables) {
+                    try (Statement stmtSrc = srcConn.createStatement();
+                        ResultSet rs = stmtSrc.executeQuery("SHOW CREATE TABLE `" + table + "`")) {
+                        if (rs.next()) {
+                            String createSQL = rs.getString(2);
+
+                            try (Statement stmtDest = destConn.createStatement()) {
+                                stmtDest.execute(createSQL);
+                                Platform.runLater(() -> log("Created table: " + table));
+                            }
+                        }
+                    } catch (SQLException e) {
+                        Platform.runLater(() -> log("Failed to create table " + table + ": " + e.getMessage()));
+                    }
+                }
+
+                Platform.runLater(() -> log("New tables synchronization complete."));
+
+            } catch (Exception e) {
+                Platform.runLater(() -> log("Error syncing new tables: " + e.getMessage()));
+            }
+        }).start();
     }
 
     @FXML
@@ -146,6 +197,17 @@ public class SyncController {
                 });
             }
         }).start();
+    }
+
+    private List<String> getTableList(Connection conn) throws SQLException {
+        List<String> tables = new ArrayList<>();
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW TABLES")) {
+            while (rs.next()) {
+                tables.add(rs.getString(1));
+            }
+        }
+        return tables;
     }
 
     // Load Tables into ComboBox
@@ -321,8 +383,11 @@ public class SyncController {
         if (sshOk && dbSrcOk && dbDestOk) {
             connStatusLabel.setText("Connected");
             connStatusLabel.setStyle("-fx-text-fill: green;");
+
+            getUpdatesButton.setDisable(false);
             syncStructButton.setDisable(false);
             syncDataButton.setDisable(false);
+
             log("Both SSH and DB connections are OK. Ready to sync.");
         }
     }

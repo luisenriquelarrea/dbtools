@@ -32,6 +32,12 @@
     <Separator />
 
     <!-- Table Selection -->
+    <Label text="Get structure updates" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
+    <Button fx:id="getUpdatesButton" text="Get updates" onAction="#handleGetUpdates" disable="true"/>
+
+    <Separator />
+
+    <!-- Table Selection -->
     <Label text="Table Selector" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
     <ComboBox fx:id="tableSelector" prefWidth="250"/>
 
