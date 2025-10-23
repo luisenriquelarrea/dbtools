@@ -7,12 +7,20 @@ import javafx.stage.Stage;
 
 public class App extends Application {
     @Override
-    public void start(Stage stage) throws Exception {
+    public void start(Stage primaryStage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/sync_view.fxml"));
         Scene scene = new Scene(loader.load(), 720, 520);
-        stage.setTitle("DB Structure Synchronizer via SSH");
-        stage.setScene(scene);
-        stage.show();
+
+        // Get the controller instance from FXML
+        SyncController controller = loader.getController();
+
+        primaryStage.setTitle("DB Structure Synchronizer via SSH");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+
+        primaryStage.setOnCloseRequest(event -> {
+            controller.closeConnections();
+        });
     }
 
     public static void main(String[] args) {
