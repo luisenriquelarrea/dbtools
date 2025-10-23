@@ -6,8 +6,7 @@
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="dbtools.SyncController"
-      spacing="10"
-      alignment="TOP_CENTER">
+      spacing="10">
 
     <padding>
         <Insets top="15" right="15" bottom="15" left="15"/>
@@ -17,36 +16,34 @@
     <Label text="🔍 Connection Status" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
 
     <HBox spacing="10">
-        <Button fx:id="checkSSHButton"
-                text="Check SSH Connection"
-                onAction="#openSSH"
+        <Button fx:id="checkConnButton"
+                text="Open Connections"
+                onAction="#openConnections"
                 prefWidth="180"/>
-        <Label fx:id="sshStatusLabel" text="Unknown" style="-fx-text-fill: gray;"/>
-    </HBox>
-
-    <HBox spacing="10">
-        <Button fx:id="checkDBButton"
-                text="Check Database Connection"
-                onAction="#openSourceDb"
+                
+        <Button fx:id="closeConnButton"
+                text="Close Connections"
+                onAction="#closeConnections"
                 prefWidth="180"/>
-        <Label fx:id="dbStatusLabel" text="Unknown" style="-fx-text-fill: gray;"/>
+                
+        <Label fx:id="connStatusLabel" text="Unknown" style="-fx-text-fill: gray;"/>
     </HBox>
 
     <Separator />
 
     <!-- Table Selection -->
-    <Label text="📋 Table Selector" style="-fx-font-weight: bold;" />
+    <Label text="Table Selector" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
     <ComboBox fx:id="tableSelector" prefWidth="250"/>
 
     <HBox spacing="10">
-        <Button fx:id="syncStructButton" text="Sync Structure" onAction="#handleSyncStructure" disable="true"/>
         <Button fx:id="syncDataButton" text="Sync Data" onAction="#handleSyncData" disable="true"/>
+        <Button fx:id="syncStructButton" text="Sync Structure" onAction="#handleSyncStructure" disable="true"/>
     </HBox>
 
     <Separator />
 
     <!-- Log Output -->
-    <Label text="🧾 Log Output" style="-fx-font-weight: bold;"/>
+    <Label text="Log Output" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
     <TextArea fx:id="logArea"
               prefHeight="200"
               prefWidth="400"

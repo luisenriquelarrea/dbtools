@@ -14,7 +14,7 @@ public class App extends Application {
         // Get the controller instance from FXML
         SyncController controller = loader.getController();
 
-        primaryStage.setTitle("DB Structure Synchronizer via SSH");
+        primaryStage.setTitle("DBTools");
         primaryStage.setScene(scene);
         primaryStage.show();
 

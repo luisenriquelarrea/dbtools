@@ -24,10 +24,9 @@ import java.util.Objects;
 
 public class SyncController {
 
-    @FXML private Button checkSSHButton;
-    @FXML private Label sshStatusLabel;
-    @FXML private Button checkDBButton;
-    @FXML private Label dbStatusLabel;
+    @FXML private Button checkConnButton;
+    @FXML private Button closeConnButton;
+    @FXML private Label connStatusLabel;
     @FXML private ComboBox<String> tableSelector;
     @FXML private Button syncStructButton;
     @FXML private Button syncDataButton;
@@ -77,21 +76,23 @@ public class SyncController {
         }
     
         Platform.runLater(() -> {
-            sshStatusLabel.setText("Disconnected");
-            sshStatusLabel.setStyle("-fx-text-fill: gray;");
+            connStatusLabel.setText("Disconnected");
+            connStatusLabel.setStyle("-fx-text-fill: gray;");
+            tableSelector.getItems().clear();
+            syncStructButton.setDisable(true);
+            syncDataButton.setDisable(true);
         });
-    }    
+    }
 
-    // SSH Connection Check
     @FXML
-    private void openSSH() {
+    private void openConnections() {
         new Thread(() -> {
             try {
+                // --- 1. SSH ---
                 String sshHost = dotenv.get("SSH_HOST");
                 String sshUser = dotenv.get("SSH_USER");
                 String sshPass = dotenv.get("SSH_PASS");
                 int sshPort = Integer.parseInt(dotenv.get("SSH_PORT"));
-                
                 int localPort = Integer.parseInt(dotenv.get("DB_SRC_AVALIABLE_PORT"));
                 int remotePort = Integer.parseInt(dotenv.get("DB_SRC_PORT"));
                 String remoteHost = dotenv.get("DB_SRC_HOST");
@@ -101,91 +102,47 @@ public class SyncController {
                 sshSession.setPassword(sshPass);
                 sshSession.setConfig("StrictHostKeyChecking", "no");
                 sshSession.connect(5000);
-
-                // Create SSH tunnel
                 sshSession.setPortForwardingL(localPort, remoteHost, remotePort);
+                sshOk = true;
+                Platform.runLater(() -> log("SSH connection successful."));
 
-                sshOk = sshSession.isConnected();
-                Platform.runLater(() -> {
-                    sshStatusLabel.setText("Connected");
-                    sshStatusLabel.setStyle("-fx-text-fill: green;");
-                    log("SSH connection successful.");
-                    enableSyncIfReady();
-                });
-            } catch (Exception e) {
-                sshOk = false;
-                Platform.runLater(() -> {
-                    sshStatusLabel.setText("Failed");
-                    sshStatusLabel.setStyle("-fx-text-fill: red;");
-                    log("SSH connection failed: " + e.getMessage());
-                });
-            }
-        }).start();
-    }
-
-    // Database Connection Check
-    private void openDestDb() {
-        new Thread(() -> {
-            try {
-                String dbHost = dotenv.get("DB_DEST_HOST");
-                String dbPort = dotenv.get("DB_DEST_PORT");
-                String dbUser = dotenv.get("DB_DEST_USER");
-                String dbPass = dotenv.get("DB_DEST_PASS");
-                String dbName = dotenv.get("DB_DEST_NAME");
-
-                String jdbcUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName
-                        + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-
-                destConn = DriverManager.getConnection(jdbcUrl, dbUser, dbPass);
-
-                dbDestOk = !destConn.isClosed();
-                Platform.runLater(() -> {
-                    dbStatusLabel.setText("Connected");
-                    dbStatusLabel.setStyle("-fx-text-fill: green;");
-                    log("Database localhost connection successful.");
-                    enableSyncIfReady();
-                });
-
-            } catch (Exception e) {
-                dbDestOk = false;
-                Platform.runLater(() -> {
-                    dbStatusLabel.setText("Failed");
-                    dbStatusLabel.setStyle("-fx-text-fill: red;");
-                    log("Database localhost connection failed: " + e.getMessage());
-                });
-            }
-        }).start();
-    }
-
-    // Database Connection Check
-    @FXML
-    private void openSourceDb() {
-        new Thread(() -> {
-            try {
+                // --- 2. Source DB (through SSH tunnel) ---
                 String dbHost = dotenv.get("DB_SRC_HOST");
-                String dbPort = dotenv.get("DB_SRC_PORT");
+                String dbName = dotenv.get("DB_SRC_NAME");
                 String dbUser = dotenv.get("DB_SRC_USER");
                 String dbPass = dotenv.get("DB_SRC_PASS");
-                String dbName = dotenv.get("DB_SRC_NAME");
-
-                String jdbcUrl = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName
+                String jdbcUrlSrc = "jdbc:mysql://"+ dbHost + ":" + localPort + "/" + dbName
                         + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
 
-                srcConn = DriverManager.getConnection(jdbcUrl, dbUser, dbPass);
-
-                dbSrcOk = !srcConn.isClosed();
+                srcConn = DriverManager.getConnection(jdbcUrlSrc, dbUser, dbPass);
+                dbSrcOk = true;
                 Platform.runLater(() -> {
-                    log("Database remote connection successful.");
+                    log("Remote DB connected via SSH tunnel.");
                     loadTables();
-                    openDestDb();
                 });
 
+                // --- 3. Destination DB (local) ---
+                String dbHostDest = dotenv.get("DB_DEST_HOST");
+                String dbPort = dotenv.get("DB_DEST_PORT");
+                String dbUserDest = dotenv.get("DB_DEST_USER");
+                String dbPassDest = dotenv.get("DB_DEST_PASS");
+                String dbNameDest = dotenv.get("DB_DEST_NAME");
+                String jdbcUrlDest = "jdbc:mysql://" + dbHostDest + ":" + dbPort + "/" + dbNameDest
+                        + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+
+                destConn = DriverManager.getConnection(jdbcUrlDest, dbUserDest, dbPassDest);
+                dbDestOk = true;
+                Platform.runLater(() -> log("Local DB connection successful."));
+
+                // --- 4. Enable sync buttons ---
+                Platform.runLater(this::enableSyncIfReady);
+
             } catch (Exception e) {
-                dbSrcOk = false;
+                sshOk = dbSrcOk = dbDestOk = false;
                 Platform.runLater(() -> {
-                    dbStatusLabel.setText("Failed");
-                    dbStatusLabel.setStyle("-fx-text-fill: red;");
-                    log("Database remote connection failed: " + e.getMessage());
+                    connStatusLabel.setText("Failed");
+                    connStatusLabel.setStyle("-fx-text-fill: red;");
+                    log("Connection failed: " + e.getMessage());
                 });
             }
         }).start();
@@ -362,6 +319,8 @@ public class SyncController {
     // Enable sync button if both connections are OK
     private void enableSyncIfReady() {
         if (sshOk && dbSrcOk && dbDestOk) {
+            connStatusLabel.setText("Connected");
+            connStatusLabel.setStyle("-fx-text-fill: green;");
             syncStructButton.setDisable(false);
             syncDataButton.setDisable(false);
             log("Both SSH and DB connections are OK. Ready to sync.");
