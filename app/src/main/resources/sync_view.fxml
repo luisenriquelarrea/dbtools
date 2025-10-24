@@ -35,7 +35,7 @@
     <!-- Table Selection -->
     <Label text="Get updates" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
     <HBox spacing="10">
-        <Button fx:id="getFavsButton" text="Sync favorites" onAction="#handleSyncFavorites" disable="true"/>
+        <Button fx:id="getFavsButton" text="Sync favorite data" onAction="#handleSyncFavorites" disable="true"/>
         <Button fx:id="getUpdatesButton" text="Sync new tables" onAction="#handleGetUpdates" disable="true"/>
     </HBox>
 

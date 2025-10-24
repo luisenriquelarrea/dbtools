@@ -9,8 +9,9 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -376,7 +377,13 @@ public class SyncController {
         new Thread(() -> {
             try {
                 List<String> favorites = new ArrayList<>();
-                try (BufferedReader reader = new BufferedReader(new FileReader("favorites.txt"))) {
+                InputStream inputStream = getClass().getResourceAsStream("/favorites.txt");
+                if (inputStream == null) {
+                    System.out.println("favorites.txt not found in resources!");
+                    return;
+                }
+                try{
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
                     String line;
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
