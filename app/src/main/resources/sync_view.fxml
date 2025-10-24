@@ -16,7 +16,7 @@
     <Label text="🔍 Connection Status" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
 
     <HBox spacing="10">
-        <Button fx:id="checkConnButton"
+        <Button fx:id="openConnButton"
                 text="Open Connections"
                 onAction="#openConnections"
                 prefWidth="180"/>
@@ -24,7 +24,8 @@
         <Button fx:id="closeConnButton"
                 text="Close Connections"
                 onAction="#closeConnections"
-                prefWidth="180"/>
+                prefWidth="180"
+                disable="true"/>
                 
         <Label fx:id="connStatusLabel" text="Unknown" style="-fx-text-fill: gray;"/>
     </HBox>
@@ -32,8 +33,11 @@
     <Separator />
 
     <!-- Table Selection -->
-    <Label text="Get structure updates" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
-    <Button fx:id="getUpdatesButton" text="Get updates" onAction="#handleGetUpdates" disable="true"/>
+    <Label text="Get updates" style="-fx-font-size: 14px; -fx-font-weight: bold;" />
+    <HBox spacing="10">
+        <Button fx:id="getFavsButton" text="Sync favorites" onAction="#handleSyncFavorites" disable="true"/>
+        <Button fx:id="getUpdatesButton" text="Sync new tables" onAction="#handleGetUpdates" disable="true"/>
+    </HBox>
 
     <Separator />
 

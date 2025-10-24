@@ -8,6 +8,9 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -24,8 +27,9 @@ import java.util.Objects;
 
 public class SyncController {
 
+    @FXML private Button getFavsButton;
     @FXML private Button getUpdatesButton;
-    @FXML private Button checkConnButton;
+    @FXML private Button openConnButton;
     @FXML private Button closeConnButton;
     @FXML private Label connStatusLabel;
     @FXML private ComboBox<String> tableSelector;
@@ -38,7 +42,6 @@ public class SyncController {
     private boolean sshOk = false;
     private boolean dbSrcOk = false;
     private boolean dbDestOk = false;
-    private boolean loadedTablesOk = false;
 
     private Session sshSession = null;
     
@@ -100,9 +103,7 @@ public class SyncController {
 
             tableSelector.getItems().clear();
 
-            getUpdatesButton.setDisable(true);
-            syncStructButton.setDisable(true);
-            syncDataButton.setDisable(true);
+            disableActionButtons(true);
 
             isBusy = false;
         });
@@ -229,7 +230,7 @@ public class SyncController {
                 Platform.runLater(this::enableSyncIfReady);
 
             } catch (Exception e) {
-                sshOk = dbSrcOk = dbDestOk = loadedTablesOk = false;
+                sshOk = dbSrcOk = dbDestOk = false;
                 Platform.runLater(() -> {
                     connStatusLabel.setText("Failed");
                     connStatusLabel.setStyle("-fx-text-fill: red;");
@@ -260,7 +261,6 @@ public class SyncController {
                 while (rs.next()) {
                     tables.add(rs.getString(1));
                 }
-                loadedTablesOk = true;
                 Platform.runLater(() -> {
                     tableSelector.getItems().setAll(tables);
                     log("Loaded " + tables.size() + " tables from remote DB.");
@@ -268,7 +268,6 @@ public class SyncController {
             } catch (Exception e) {
                 Platform.runLater(() -> log("Failed to load tables: " + e.getMessage()));
                 tableSelector.getItems().clear();
-                loadedTablesOk = false;
                 isBusy = false;
             }
         }).start();
@@ -363,7 +362,59 @@ public class SyncController {
             isBusy = false;
             return;
         }
+        syncTableData(table);
+    }
 
+    @FXML
+    private void handleSyncFavorites(){
+        if (isBusy) {
+            log("Still working...");
+            return;
+        }
+        isBusy = true;
+
+        new Thread(() -> {
+            try {
+                List<String> favorites = new ArrayList<>();
+                try (BufferedReader reader = new BufferedReader(new FileReader("favorites.txt"))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.isEmpty() || line.startsWith("#")) continue;
+                        favorites.add(line);
+                    }
+                } catch (IOException e) {
+                    Platform.runLater(() -> log("No favorites found or error reading file: " + e.getMessage()));
+                    return;
+                }
+
+                if (favorites.isEmpty()) {
+                    Platform.runLater(() -> log("No favorite tables to sync."));
+                    return;
+                }
+
+                Platform.runLater(() -> log("Syncing " + favorites.size() + " favorite table(s): " + favorites));
+
+                for (String table : favorites) {
+                    final String t = table;
+                    Platform.runLater(() -> log("Syncing table: " + t));
+                    syncTableData(t);
+                }
+
+                Platform.runLater(() -> log("Favorites sync completed."));
+
+            } finally {
+                Platform.runLater(() -> isBusy = false);
+            }
+        }).start();
+    }
+
+    public void syncTableData(String table){
+        if (table == null || table.isEmpty()) {
+            log("Select a table first.");
+            isBusy = false;
+            return;
+        }
         log("Starting batch data synchronization for table: " + table);
 
         new Thread(() -> {
@@ -456,15 +507,22 @@ public class SyncController {
         }).start();
     }
 
+    private void disableActionButtons(boolean status){
+        openConnButton.setDisable(!status); // enable when connected
+        closeConnButton.setDisable(status); // enable when disconnected
+        getFavsButton.setDisable(status);
+        getUpdatesButton.setDisable(status);
+        syncStructButton.setDisable(status);
+        syncDataButton.setDisable(status);
+    }
+
     // Enable sync button if both connections are OK
     private void enableSyncIfReady() {
-        if (sshOk && dbSrcOk && dbDestOk && loadedTablesOk) {
+        if (sshOk && dbSrcOk && dbDestOk) {
             connStatusLabel.setText("Connected");
             connStatusLabel.setStyle("-fx-text-fill: green;");
 
-            getUpdatesButton.setDisable(false);
-            syncStructButton.setDisable(false);
-            syncDataButton.setDisable(false);
+            disableActionButtons(false);
 
             log("Both SSH and DB connections are OK. Ready to sync.");
 

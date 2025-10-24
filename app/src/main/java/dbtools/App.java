@@ -1,6 +1,7 @@
 package dbtools;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -18,8 +19,15 @@ public class App extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
+        // Ensure connections close properly on exit
         primaryStage.setOnCloseRequest(event -> {
-            controller.closeConnections();
+            try {
+                controller.closeConnections();
+            } catch (Exception e) {
+                System.err.println("Error closing connections: " + e.getMessage());
+            } finally {
+                Platform.exit();
+            }
         });
     }
 
