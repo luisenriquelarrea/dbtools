@@ -309,13 +309,13 @@ public class SyncController {
                 for (var entry : sourceCols.entrySet()) {
                     String col = entry.getKey();
                     ColumnInfo srcInfo = entry.getValue();
-
+                    String colSql = srcInfo.toSQL().replaceAll("\\(\\d+\\)", "");
                     if (!destCols.containsKey(col)) {
-                        alterStatements.add("ALTER TABLE " + table + " ADD COLUMN " + srcInfo.toSQL() + ";");
+                        alterStatements.add("ALTER TABLE " + table + " ADD COLUMN " + colSql + ";");
                     } else {
                         ColumnInfo destInfo = destCols.get(col);
                         if (!srcInfo.equals(destInfo)) {
-                            alterStatements.add("ALTER TABLE " + table + " MODIFY COLUMN " + srcInfo.toSQL() + ";");
+                            alterStatements.add("ALTER TABLE " + table + " MODIFY COLUMN " + colSql + ";");
                         }
                     }
                 }
