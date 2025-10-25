@@ -309,7 +309,8 @@ public class SyncController {
                 for (var entry : sourceCols.entrySet()) {
                     String col = entry.getKey();
                     ColumnInfo srcInfo = entry.getValue();
-                    String colSql = srcInfo.toSQL().replaceAll("\\(\\d+\\)", "");
+                    String colSql = srcInfo.toSQL()
+                        .replaceAll("(\\b(?:TINYINT|SMALLINT|MEDIUMINT|INT|BIGINT))\\(\\d+\\)", "$1");
                     if (!destCols.containsKey(col)) {
                         alterStatements.add("ALTER TABLE " + table + " ADD COLUMN " + colSql + ";");
                     } else {
